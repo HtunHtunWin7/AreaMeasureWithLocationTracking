@@ -45,27 +45,21 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:context=".MapsActivity" />
-    <ImageButton
-        android:id="@+id/currentLocationImageButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginEnd="20dp"
-        android:layout_marginBottom="40dp"
-        android:contentDescription="@null"
-        android:src="@drawable/current_location_image_vector" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Start"
+        android:onClick="startUpdatesButtonHandler"
         android:id="@+id/btnStart"
         android:layout_gravity="bottom|center"
         android:layout_marginBottom="30dp"/>
     <Button
+        android:visibility="gone"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Stop"
+        android:onClick="stopUpdatesButtonHandler"
         android:id="@+id/btnStop"
         android:layout_gravity="center|bottom"
         android:layout_marginBottom="30dp"/>
