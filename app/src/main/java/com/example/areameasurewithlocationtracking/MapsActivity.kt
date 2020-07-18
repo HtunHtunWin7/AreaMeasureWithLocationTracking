@@ -26,7 +26,6 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
@@ -38,7 +37,7 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
 
 
     private val TAG = MapsActivity::class.java.simpleName
-    private var mMap :GoogleMap ?= null
+    private var mMap: GoogleMap? = null
 
     /**
      * Code used in requesting runtime permissions.
@@ -65,7 +64,6 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
     // Keys for storing activity state in the Bundle.
     private val KEY_REQUESTING_LOCATION_UPDATES = "requesting-location-updates"
     private val KEY_LOCATION = "location"
-    private val KEY_LAST_UPDATED_TIME_STRING = "last-updated-time-string"
 
     /**
      * Provides access to the Fused Location Provider API.
@@ -99,7 +97,7 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
     private var mCurrentLocation: Location? = null
     private var mRequestingLocationUpdates: Boolean = true
 
-    private var tempLocation :Location ?= null
+    private var tempLocation: Location? = null
     var distanceCovered = 0f
 
     private var arrayPoints: MutableList<LatLng> = mutableListOf()
@@ -108,6 +106,7 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_maps)
+        mRequestingLocationUpdates = false
         setUpInitialView()
 
 
@@ -131,13 +130,14 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
     }
 
     private fun checkPermissions(): Boolean {
-        val permissionState = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+        val permissionState =
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
         return permissionState == PackageManager.PERMISSION_GRANTED
     }
 
     private fun setUpInitialView() {
-        //btnStart.visibility = View.VISIBLE
-        //linearLayout.visibility = View.GONE
+        btnStart.visibility = View.VISIBLE
+        linearLayout.visibility = View.GONE
         btnStop.visibility = View.GONE
         if (!isLocationEnabled(this)) {
             checkPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -146,12 +146,38 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
     }
-
-
+    private fun onClickStartButton(){
+        mMap!!.clear()
+        btnStart.visibility = View.GONE
+        btnStop.visibility = View.VISIBLE
+        linearLayout.visibility = View.VISIBLE
+    }
+    private fun onClickStopButton(){
+        btnStart.visibility = View.VISIBLE
+        btnStop.visibility = View.GONE
+        linearLayout.visibility = View.GONE
+        arrayPoints.clear()
+        distanceCovered = 0f
+        mMap!!.clear()
+    }
+    /*private fun setButtonState(){
+        if (mRequestingLocationUpdates){
+            btnStart.visibility = View.GONE
+            btnStop.visibility = View.VISIBLE
+            linearLayout.visibility = View.VISIBLE
+        }else{
+            btnStart.visibility = View.VISIBLE
+            btnStop.visibility = View.GONE
+            linearLayout.visibility = View.GONE
+            arrayPoints.clear()
+            distanceCovered = 0f
+        }
+    }*/
 
     fun startUpdatesButtonHandler(view: View?) {
         if (!mRequestingLocationUpdates) {
             mRequestingLocationUpdates = true
+            onClickStartButton()
             startLocationUpdates()
         }
     }
@@ -161,10 +187,12 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
         // stopped state. Doing so helps battery performance and is especially
         // recommended in applications that request frequent location updates.
         stopLocationUpdates()
+        onClickStopButton()
     }
+
     private fun stopLocationUpdates() {
         if (!mRequestingLocationUpdates) {
-            Log.d(TAG,"stopLocationUpdates: updates never requested, no-op.")
+            Log.d(TAG, "stopLocationUpdates: updates never requested, no-op.")
             return
         }
         mFusedLocationClient!!.removeLocationUpdates(mLocationCallback)
@@ -172,6 +200,7 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
                 mRequestingLocationUpdates = false
             }
     }
+
     /**
      * Creates a callback for receiving location events.
      */
@@ -202,7 +231,7 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
         // application will never receive updates faster than this value.
         mLocationRequest!!.fastestInterval = FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS
         mLocationRequest!!.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-        mLocationRequest!!.smallestDisplacement = 7f
+        mLocationRequest!!.smallestDisplacement = 3f
     }
 
     private fun buildLocationSettingsRequest() {
@@ -216,23 +245,40 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
      */
     private fun updateLocationUI() {
         val distanceResults = FloatArray(1)
-            if (mCurrentLocation != null )
-            {
-                if (tempLocation != null){
-                    val temp = Location.distanceBetween(
-                        tempLocation!!.latitude, tempLocation!!.longitude,
-                        mCurrentLocation!!.latitude, mCurrentLocation!!.longitude,distanceResults
-                    )
-                    distanceCovered += distanceResults[0]
-                    distanceCoveredTextView.text = getDistanceInKm(distanceCovered.toDouble())
-                }else{
-                    distanceCoveredTextView.text = getDistanceInKm(0.0)
-                }
-                tempLocation = mCurrentLocation
-                arrayPoints.add(LatLng(mCurrentLocation!!.latitude, mCurrentLocation!!.longitude))
-                polyLineOptions()
+        if (mCurrentLocation != null) {
+            if (tempLocation != null) {
+                val temp = Location.distanceBetween(
+                    tempLocation!!.latitude, tempLocation!!.longitude,
+                    mCurrentLocation!!.latitude, mCurrentLocation!!.longitude, distanceResults
+                )
+                distanceCovered += distanceResults[0]
+                distanceCoveredTextViewInMeter.text = getDistanceInKm(distanceCovered.toDouble())
+                distanceCoveredTextViewInAcre.text = getDistanceInAcre(distanceCovered.toDouble())
+            } else {
+                distanceCoveredTextViewInMeter.text = getDistanceInKm(0.0)
+                distanceCoveredTextViewInAcre.text = getDistanceInAcre(0.0)
             }
+            tempLocation = mCurrentLocation
+            arrayPoints.add(LatLng(mCurrentLocation!!.latitude, mCurrentLocation!!.longitude))
+            polyLineOptions()
+        }
     }
+
+    private fun getDistanceInAcre(totalDistance: Double): String {
+        val df = DecimalFormat("#.####")
+        return when (totalDistance) {
+            0.0 -> {
+                "0 Acre"
+            }
+            1.0 -> {
+                df.format(totalDistance*0.000247105).toString()+ " Acre"
+            }
+            else -> {
+                df.format(totalDistance * 0.000247105).toString() + " Acres"
+            }
+        }
+    }
+
     private fun getDistanceInKm(totalDistance: Double): String {
         if (totalDistance == 0.0 || totalDistance < -1)
             return "0 Km"
@@ -247,7 +293,11 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
         // Begin by checking if the device has the necessary location settings.
         mSettingsClient!!.checkLocationSettings(mLocationSettingsRequest)
             .addOnSuccessListener(this) {
-                mFusedLocationClient!!.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper())
+                mFusedLocationClient!!.requestLocationUpdates(
+                    mLocationRequest,
+                    mLocationCallback,
+                    Looper.myLooper()
+                )
                 updateLocationUI()
             }.addOnFailureListener(this) { e ->
                 when ((e as ApiException).statusCode) {
@@ -257,14 +307,15 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
                             // result in onActivityResult().
                             val rae = e as ResolvableApiException
                             rae.startResolutionForResult(
-                                this,REQUEST_CHECK_SETTINGS
+                                this, REQUEST_CHECK_SETTINGS
                             )
                         } catch (sie: SendIntentException) {
 
                         }
                     }
                     LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE -> {
-                        val errorMessage ="Location settings are inadequate, and cannot be " + "fixed here. Fix in Settings."
+                        val errorMessage =
+                            "Location settings are inadequate, and cannot be " + "fixed here. Fix in Settings."
                         Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
                         mRequestingLocationUpdates = false
                     }
@@ -275,11 +326,18 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
 
     private fun requestPermissions() {
         val shouldProvideRationale =
-            ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            ActivityCompat.shouldShowRequestPermissionRationale(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
         if (shouldProvideRationale) {
             showSnackbar(R.string.permission_rationale,
                 android.R.string.ok, View.OnClickListener { // Request permission
-                    ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_PERMISSIONS_REQUEST_CODE)
+                    ActivityCompat.requestPermissions(
+                        this,
+                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                        REQUEST_PERMISSIONS_REQUEST_CODE
+                    )
                 })
         } else {
             // Request permission. It's possible this can be auto answered if device policy
@@ -295,8 +353,12 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        when (requestCode) {REQUEST_CHECK_SETTINGS -> when (resultCode) {
-                Activity.RESULT_OK -> Log.i(TAG,"User agreed to make required location settings changes.")
+        when (requestCode) {
+            REQUEST_CHECK_SETTINGS -> when (resultCode) {
+                Activity.RESULT_OK -> Log.i(
+                    TAG,
+                    "User agreed to make required location settings changes."
+                )
                 Activity.RESULT_CANCELED -> {
                     Log.i(TAG, "User chose not to make required location settings changes.")
                     mRequestingLocationUpdates = false
@@ -305,15 +367,16 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
             }
         }
     }
+
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<String?>,
         grantResults: IntArray
     ) {
         if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
-            if (grantResults.size <= 0) {
+            if (grantResults.isEmpty()) {
                 // If user interaction was interrupted, the permission request is cancelled and you
                 // receive empty arrays.
-                Log.d("Cancel ","User iteraction was cancelled")
+                Log.d("Cancel ", "User iteraction was cancelled")
             } else if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 if (mRequestingLocationUpdates) {
                     startLocationUpdates()
@@ -347,8 +410,13 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
         }
     }
 
-    private fun showSnackbar(mainTextStringId: Int, actionStringId: Int, listener: View.OnClickListener) {
-        Snackbar.make(findViewById<View>(android.R.id.content), getString(mainTextStringId),
+    private fun showSnackbar(
+        mainTextStringId: Int,
+        actionStringId: Int,
+        listener: View.OnClickListener
+    ) {
+        Snackbar.make(
+            findViewById<View>(android.R.id.content), getString(mainTextStringId),
             Snackbar.LENGTH_INDEFINITE
         ).setAction(getString(actionStringId), listener).show()
     }
@@ -357,26 +425,27 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         mMap!!.mapType = GoogleMap.MAP_TYPE_HYBRID
-        if (mCurrentLocation != null){
-            Toast.makeText(this,"Hello",Toast.LENGTH_LONG).show()
+        if (mCurrentLocation != null) {
+            Toast.makeText(this, "Hello", Toast.LENGTH_LONG).show()
             val latLng = LatLng(mCurrentLocation!!.latitude, mCurrentLocation!!.longitude)
-            val options = MarkerOptions()
-                .icon(BitmapDescriptorFactory.defaultMarker())
+            /*val options = MarkerOptions()
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
                 .position(latLng)
                 .flat(true)
-            mMap!!.addMarker(options)
+            mMap!!.addMarker(options)*/
             mMap!!.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 18f))
-        }else{
+        } else {
             mFusedLocationClient?.lastLocation?.addOnSuccessListener {
                 val latLng = LatLng(it!!.latitude, it!!.longitude)
-                val options = MarkerOptions()
-                    .icon(BitmapDescriptorFactory.defaultMarker())
-                    .position(latLng)
-                    .flat(true)
-                mMap!!.addMarker(options)
+                /* val options = MarkerOptions()
+                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
+                     .position(latLng)
+                     .flat(true)
+                 mMap!!.addMarker(options)*/
                 mMap!!.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 18f))
             }
         }
+        mMap!!.isMyLocationEnabled = true
 
     }
 
@@ -385,7 +454,7 @@ class MapsActivity : OnMapReadyCallback, AppCompatActivity() {
         //mMap.addMarker(marker);
         polylineOptions = PolylineOptions()
         polylineOptions.color(Color.BLUE)
-        polylineOptions.width(5f)
+        polylineOptions.width(6f)
         polylineOptions.addAll(arrayPoints)
         mMap?.addPolyline(polylineOptions)
     }
